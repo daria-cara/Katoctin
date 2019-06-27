@@ -1,0 +1,19 @@
+# Compiled files
+*.py[cod]
+__pycache__
+
+# Other generated files
+.ipynb_checkpoints
+
+# Pycharm editor project files
+.idea
+
+# Packages/installer info
+
+# Other
+*~
+.settings
+mastDownload
+
+# Mac OSX
+.DS_Store
