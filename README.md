@@ -1,2 +1,2 @@
 # Katoctin
-My summer project at Space Telescope
+My summer project at Space Telescope Science Institute
