@@ -85,10 +85,11 @@ def get_lc(lc_data, project, use_quality=True):
     return time, raw_flux, cor_flux
 
 
-def plot_lc(t, raw, cor, detr, star):
-    fig = plt.figure(figsize=(11, 5))
+def plot_lc(t, raw, cor, detr, star, project, plotno=None):
+    fig = plt.figure(plotno, figsize=(11, 5))
 
     fig.add_subplot(311)
+    plt.title(project, loc = 'right')
     plt.plot(t, raw, 'r.', label='RAW')
     plt.legend(loc='best')
     plt.title('Lightcurves for ' + star)
@@ -107,12 +108,9 @@ def plot_lc(t, raw, cor, detr, star):
     plt.show()
 
 
-def detrend_lc(data, median_kernel_size=25, not_everest=True):
+def detrend_lc(data, not_everest, median_kernel_size=25):
     proc_data = signal.medfilt(data, kernel_size=median_kernel_size)
-    if not_everest:
-        detrend_data = data / proc_data
-    else:
-        detrend_data = (data / proc_data) + statistics.median(data)
+    detrend_data = data / proc_data
     return detrend_data
 
 
@@ -120,7 +118,7 @@ def calc_stats():
     return 1
 
 
-def tls_plot(t, flux, star):
+def tls_plot(t, flux, star, project, plotno):
     print("\n\nt: {}\nflux: {}\nstar: {}\n\n".format(t, flux, star))
     model = transitleastsquares(t, flux)
     results = model.power()
@@ -133,7 +131,7 @@ def tls_plot(t, flux, star):
     print('Best duration (days)', format(results.duration, '.5f'))
     print('Signal detection efficiency (SDE):', results.SDE)
 
-    fig = plt.figure(figsize=(9, 7))
+    fig = plt.figure(plotno, figsize=(9, 7))
     fig.add_subplot(313)
     plt.title('SDE vs. Period for ' + star)
     ax = plt.gca()
@@ -142,7 +140,7 @@ def tls_plot(t, flux, star):
     for n in range(2, 10):
         ax.axvline(n * results.period, alpha=0.4, lw=1, linestyle="dashed")
         ax.axvline(results.period / n, alpha=0.4, lw=1, linestyle="dashed")
-    plt.ylabel(r'SDE')
+    plt.ylabel('SDE')
     plt.xlabel('Period (days)')
     plt.plot(results.periods, results.power, color='black', lw=0.5)
     plt.xlim(0, max(results.periods))
@@ -151,18 +149,18 @@ def tls_plot(t, flux, star):
     plt.title('Folded Transit Curve for ' + star)
     plt.plot(results.model_folded_phase, results.model_folded_model, color='red')
     plt.scatter(results.folded_phase, results.folded_y, color='blue', s=10, alpha=0.5, zorder=2)
-    plt.xlim(0.48, 0.52)
+    plt.xlim(0.5-(0.6*(results.duration/results.period)), 0.5+(0.6*(results.duration/results.period)))
     plt.xlabel('Phase')
     plt.ylabel('Relative flux');
 
     fig.add_subplot(311)
+    plt.title(project, loc='right')
     plt.title('Folded Transit Curve for ' + star)
     plt.plot(results.model_folded_phase, results.model_folded_model, color='red')
     plt.scatter(results.folded_phase, results.folded_y, color='blue', s=10, alpha=0.5, zorder=2)
     plt.xlim(0.0, 1)
     plt.xlabel('Phase')
-    plt.ylabel('Relative flux');
-
+    plt.ylabel('Relative flux')
     plt.tight_layout()
 
 
@@ -180,7 +178,8 @@ def main():
                 catalog.append(sline)
         catalog = list(set(catalog))
 
-    project_list = ["hlsp_k2sff", "k2", "hlsp_everest"]
+    project_list = ["hlsp_everest", "hlsp_k2sff", "k2"]
+    plotno = 1
     for project in project_list:
         for star_id in catalog[0:1]:
             try:
@@ -200,8 +199,10 @@ def main():
             if calc_stats() > 0:
                 fcor_flux = detrend_lc(cor_flux, not_everest=project in ["hlsp_k2sff", "k2"])
 
-                plot_lc(time, raw_flux, cor_flux, fcor_flux, star_id)
-                tls_plot(time, fcor_flux, star_id)
+                plot_lc(time, raw_flux, cor_flux, fcor_flux, star_id, project, plotno)
+                plotno += 1
+                tls_plot(time, fcor_flux, star_id, project, plotno)
+                plotno += 1
 
 
 if __name__ == "__main__":
