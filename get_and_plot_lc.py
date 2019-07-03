@@ -110,7 +110,7 @@ def plot_lc(t, raw, cor, detr, star):
 def detrend_lc(data, median_kernel_size=25, not_everest=True):
     proc_data = signal.medfilt(data, kernel_size=median_kernel_size)
     if not_everest:
-        detrend_data = (data / proc_data)
+        detrend_data = (data - proc_data) / std
     else:
         detrend_data = (data / proc_data) + statistics.median(data)
     return detrend_data
@@ -121,10 +121,13 @@ def calc_stats():
 
 
 def tls_plot(t, flux, star):
+    print("\n\nt: {}\nflux: {}\nstar: {}\n\n".format(t, flux, star))
     model = transitleastsquares(t, flux)
     results = model.power()
+    print("\n\nmodel:\n{}\n\n".format(model))
+    print("\n\nRESULTS:\n{}\n\n".format(results))
     print('Period', format(results.period, '.5f'), 'd')
-    print(len(results.transit_times), 'transit times in time series:', \
+    print(len(results.transit_times), 'transit times in time series:',
           ['{0:0.5f}'.format(i) for i in results.transit_times])
     print('Transit depth', format(results.depth, '.5f'))
     print('Best duration (days)', format(results.duration, '.5f'))
@@ -168,33 +171,38 @@ def log_results(star, project):
     print(today.strftime("%Y%m%d"))
 
 
-with open("/Users/dcara/project/Katoctin/k2name.csv") as f:
-    catalog = []
-    for line in f.readlines():
-        sline = line.strip()
-        if sline:
-            catalog.append(sline)
-    catalog = list(set(catalog))
+def main():
+    with open("/Users/dcara/project/Katoctin/k2name.csv") as f:
+        catalog = []
+        for line in f.readlines():
+            sline = line.strip()
+            if sline:
+                catalog.append(sline)
+        catalog = list(set(catalog))
 
-project_list = ["hlsp_k2sff", "k2"]
-for project in project_list:
-    for star_id in catalog[0:1]:
-        try:
-            data_files, data_prod, _ = get_file(star_id, project)
-            print("THIS LIGHT CURVE USES PROJECT: " + project)
-        except Exception:
-            print("There was an issue retrieving the files for " + star_id + " in the " + project + " data set.")
-            continue
-        try:
-            time, raw_flux, cor_flux = get_lc(data_files[0], project)
-        except ValueError as e:
-            print("{} Project: {}".format(e.args[0], project))
-            continue
-        if calc_stats() > 0:
-            if project == "hlsp_k2sff" or project == "k2":
-                fcor_flux = detrend_lc(cor_flux)
-            else:
-                fcor_flux = detrend_lc(cor_flux, not_everest=False)
+    project_list = ["hlsp_k2sff", "k2", "hlsp_everest"]
+    for project in project_list:
+        for star_id in catalog[0:1]:
+            try:
+                data_files, data_prod, _ = get_file(star_id, project)
+                print("THIS LIGHT CURVE USES PROJECT: " + project)
+            except Exception:
+                print("There was an issue retrieving the files for " + star_id + " in the " + project + " data set.")
+                continue
+            try:
+                time, raw_flux, cor_flux = get_lc(data_files[0], project)
+                print("TIME: ", type(time), time.shape)
+                print("raw_flux: ", type(raw_flux), raw_flux.shape)
+                print("cor_flux: ", type(cor_flux), cor_flux.shape)
+            except ValueError as e:
+                print("{} Project: {}".format(e.args[0], project))
+                continue
+            if calc_stats() > 0:
+                fcor_flux = detrend_lc(cor_flux, not_everest=project in ["hlsp_k2sff", "k2"])
 
-            plot_lc(time, raw_flux, cor_flux, fcor_flux, star_id)
-            tls_plot(time, fcor_flux, star_id)
+                plot_lc(time, raw_flux, cor_flux, fcor_flux, star_id)
+                tls_plot(time, fcor_flux, star_id)
+
+
+if __name__ == "__main__":
+    main()
