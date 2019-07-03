@@ -110,7 +110,7 @@ def plot_lc(t, raw, cor, detr, star):
 def detrend_lc(data, median_kernel_size=25, not_everest=True):
     proc_data = signal.medfilt(data, kernel_size=median_kernel_size)
     if not_everest:
-        detrend_data = (data - proc_data) / std
+        detrend_data = data / proc_data
     else:
         detrend_data = (data / proc_data) + statistics.median(data)
     return detrend_data
