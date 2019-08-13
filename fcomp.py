@@ -1,0 +1,59 @@
+
+import pandas as pd
+import numpy as np
+import argparse
+
+
+def check_periods(summary, mast, output):
+    res_df = pd.read_csv(summary)
+    mast_df = pd.read_csv(mast)
+    match_accuracy = []
+    matched_planet_name = []
+    matched_pl_period = []
+    for star, calc_period in zip(res_df['star_id'], res_df['period']):
+        select_rows = mast_df['epic_name'] == star
+        fmast_df = mast_df[select_rows]
+        match_error = []
+        for planet, period in zip(fmast_df['pl_name'], fmast_df['pl_orbper']):
+            match_error.append(abs((calc_period - period) / period))
+        match_idx = np.argmin(match_error)
+        match_planet = fmast_df['pl_name'].values[match_idx]
+        match_period = fmast_df['pl_orbper'].values[match_idx]
+        match_accuracy.append(match_error[match_idx])
+        matched_planet_name.append(match_planet)
+        matched_pl_period.append(match_period)
+    res_df['match_acc'] = match_accuracy
+    res_df['match_pl'] = matched_planet_name
+    res_df['mast_period'] = matched_pl_period
+    res_df.sort_values(by=['star_id'])
+    res_df.to_csv(output)
+
+
+if __name__ == "__main__":
+    # Parse input parameters:
+    parser = argparse.ArgumentParser(
+        description='Compare periods for found planets with known values from MAST.'
+    )
+
+    parser.add_argument(
+        '-s', '--summary', default='logs/summary_log.csv', action='store',
+        help='File name of the summary log with computed results.'
+    )
+
+    parser.add_argument(
+        '-m', '--mast', default='k2_mast.csv', action='store',
+        help='File name of the mast file containing the confirmed period and data.'
+    )
+
+    parser.add_argument(
+        '-o', '--output', default="comp_res.csv", action='store',
+        help='File name to which to save the results of the comparison.'
+    )
+
+    options = parser.parse_args()
+
+    summary = options.summary
+    mast = options.mast
+    output_file = options.output
+
+    check_periods(summary, mast, output_file)
